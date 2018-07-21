@@ -25,7 +25,7 @@ services:
   tests:
     extends: base
 
-    command: "py.test -s /skill/tests"
+    command: "py.test -s -vv /skill/tests/test_game.py"
 
     volumes:
       - ./tests:/skill/tests
