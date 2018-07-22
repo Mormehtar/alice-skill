@@ -274,6 +274,7 @@ class Game(BaseGame):
         self.enemy_ships = {}
         self.hits = 0
         self.ship_under_fire = []
+        self.place_points = None
 
     def start_new_game(self, size=10, field=None, ships=None, numbers=None):
         super(Game, self).start_new_game(size, field, ships, numbers)
@@ -390,11 +391,95 @@ class Game(BaseGame):
         self.field = [0] * self.size ** 2
 
         for length in self.ships:
-            self.place_ship(length)
+            self.place_ship_greedily(length)
 
         for i in range(len(self.field)):
             if self.field[i] == BLOCKED:
                 self.field[i] = EMPTY
+
+    CORNER_LIMIT = 2
+
+    def ensure_place_points(self):
+        if self.place_points is None:
+            self.place_points = {
+                (1, self.size): {(0, 1), (1, 0), (0, -1), (-1, 0)},
+                (self.size, 1): {(0, 1), (1, 0), (0, -1), (-1, 0)},
+                (1, 1): {(0, 1), (1, 0), (0, -1), (-1, 0)},
+                (self.size, self.size): {(0, 1), (1, 0), (0, -1), (-1, 0)},
+            }
+
+    def place_ship_greedily(self, length):
+        if length >= self.CORNER_LIMIT:
+            self.ensure_place_points()
+            if len(self.place_points) == 0:
+                raise Exception('CIRCLE FIELD!')
+            point = random.choice(self.place_points.keys())
+            directions = self.place_points.pop(point)
+            while len(directions):
+                direction = random.sample(directions, 1)[0]
+                directions.discard(direction)
+                ship = [
+                    (
+                        (point[0] + direction[0] * i),
+                        (point[1] + direction[1] * i),
+                    )
+                    for i in range(length)
+                ]
+                if not all(
+                        map(
+                            lambda cell: self.is_in_field(cell) and self.field[self.calc_index(cell)] == EMPTY,
+                            ship
+                        )
+                ):
+                    continue
+                self.set_ship(ship)
+                self.expand_corners(ship)
+                break
+            else:
+                self.place_ship_greedily(length)
+        else:
+            self.place_ship(length)
+
+    def expand_corners(self, ship):
+        directions = {(0, 1), (1, 0), (0, -1), (-1, 0)}
+        allowed_directions = {
+            (ship[1][0] - ship[0][0], ship[1][1] - ship[0][1]),
+            (ship[0][0] - ship[1][0], ship[0][1] - ship[1][1]),
+        }
+        for element in ship:
+            for direction in directions:
+                candidate = (element[0] + 2 * direction[0], element[1] + 2 * direction[1])
+                if not self.is_in_field(candidate) or self.field[self.calc_index(candidate)] != EMPTY:
+                    continue
+                allowed_positions = 0
+                for try_direction in directions:
+                    check_point = (candidate[0] + try_direction[0], candidate[1] + try_direction[1])
+                    if not self.is_in_field(check_point):
+                        continue
+                    if self.field[self.calc_index(check_point)] == EMPTY:
+                        allowed_positions += 1
+                    if allowed_positions > 2:
+                        break
+                if allowed_positions == 2:
+
+                    self.place_points[candidate] = allowed_directions
+
+    def is_in_field(self, point):
+        return 1 <= point[0] <= self.size and 1 <= point[1] <= self.size
+
+    def set_ship(self, ship):
+        for element in ship:
+            for i in xrange(-1, 2):
+                for j in xrange(-1, 2):
+                    candidate = ((element[0] + i), (element[1] + j))
+                    if not self.is_in_field(candidate):
+                        continue
+                    new_point = self.calc_index(candidate)
+                    if i == 0 and j == 0:
+                        self.field[new_point] = SHIP
+                    if candidate in ship:
+                        continue
+                    self.field[new_point] = BLOCKED
 
     def place_ship(self, length):
         def _try_to_place():
