@@ -184,6 +184,7 @@ def test_strategy_recheck_after_4(game):
     assert game.state == 1
 
 
+@pytest.mark.skip('Used only to see strategy in action')
 def test_strategy_move_to_napalm(game):
     game.do_shot()
     game.handle_enemy_reply('hit')
@@ -222,6 +223,11 @@ def test_strategy_move_to_napalm(game):
     game.do_shot()
     game.handle_enemy_reply('kill')
     assert game.state == 4
+
+
+@pytest.mark.skip('Used only to see strategy in action')
+def test_field(game):
+    game.print_field()
 
 
 @pytest.mark.skip('Used only to see strategy in action')
