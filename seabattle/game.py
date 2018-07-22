@@ -434,7 +434,9 @@ class Game(BaseGame):
         for element in ship:
             for direction in directions:
                 candidate = (element[0] + 2 * direction[0], element[1] + 2 * direction[1])
-                if not self.is_in_field(candidate) or self.field[self.calc_index(candidate)] != EMPTY:
+                if not self.is_in_field(candidate) or self.field[self.calc_index(candidate)] != EMPTY or not (
+                    candidate[0] == 1 or candidate[1] == 1 or candidate[0] == self.size or candidate[1] == self.size
+                ):
                     continue
                 allowed_positions = 0
                 for try_direction in directions:
@@ -446,8 +448,13 @@ class Game(BaseGame):
                     if allowed_positions > 2:
                         break
                 if allowed_positions == 2:
-
-                    self.place_points[candidate] = allowed_directions
+                    place_directions = allowed_directions.copy()
+                    for direction in directions:
+                        if not self.is_in_field((candidate[0] + direction[0], candidate[1] + direction[1])):
+                            normal = (direction[1], direction[0])
+                            place_directions.add(normal)
+                            place_directions.add((-normal[0], -normal[1]))
+                    self.place_points[candidate] = place_directions
 
     def is_in_field(self, point):
         return 1 <= point[0] <= self.size and 1 <= point[1] <= self.size
